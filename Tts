@@ -1,1 +1,71 @@
-
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import json
+import urllib.request
+API_KEY = "YOUR_NEW_GEMINI_KEY"
+class TTSHandler(BaseHTTPRequestHandler):
+    def send_json(self, data, status=200):
+        response = json.dumps(data).encode()
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
+        self.end_headers()
+self.wfile.write(response)
+  def do_OPTIONS(self):
+        self.send_json({})
+   def do_GET(self):
+        self.send_json({
+            "status": "TTS AI server is running"
+        })
+    def do_POST(self):
+   try:
+            length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(length)
+   data = json.loads(body)
+            problem = data.get("message", "")
+ prompt = """
+You are TECH TROUBLE SOLVER (TTS),
+an AI mobile troubleshooting assistant.
+Understand the user's complete problem, not just keywords.
+Give simple, safe, step-by-step Android troubleshooting instructions.
+If important information is missing, ask a useful follow-up question.
+User problem:
+""" + problem
+ url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent"
+request_data = {
+                "contents": [
+                    {
+                        "parts": [
+                            {
+                                "text": prompt
+                            }
+                        ]
+                    }
+                ]
+            }
+ request = urllib.request.Request(
+                url,
+                data=json.dumps(request_data).encode(),
+                headers={
+                    "Content-Type": "application/json",
+                    "x-goog-api-key": API_KEY
+                },
+                method="POST"
+            )
+with urllib.request.urlopen(request) as response:
+      result = json.loads(
+                    response.read().decode()
+                )
+   answer = result["candidates"][0]["content"]["parts"][0]["text"]
+self.send_json({
+                "answer": answer
+            })
+ except Exception as e:
+   self.send_json({
+                "error": str(e)
+            }, 500)
+server = HTTPServer(("0.0.0.0", 8000), TTSHandler)
+print("TTS AI SERVER RUNNING")
+print("http://127.0.0.1:8000")
+server.serve_forever()
